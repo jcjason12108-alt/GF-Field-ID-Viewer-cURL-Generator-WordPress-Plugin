@@ -80,11 +80,40 @@ add_action('admin_head', function () {
 	?>
 	<style>
 		.gf-fis-wrap .notice{margin:1em 0;}
-		.gf-fis-table th, .gf-fis-table td{vertical-align: top;}
-		.gf-fis-subids{font-family:monospace;font-size:12px}
-		.gf-fis-table .col-narrow{width:110px}
-		.gf-fis-table .col-wide{width:60%}
-		.gf-fis-form-select{min-width:260px}
+		.gf-fis-wrap{max-width:1280px;}
+		.gf-fis-form-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0 22px;}
+		.gf-fis-form-select{min-width:min(560px,100%);}
+		.gf-fis-panel{background:#fff;border:1px solid #c3c4c7;margin-top:14px;}
+		.gf-fis-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid #dcdcde;}
+		.gf-fis-panel-title{margin:0;font-size:18px;line-height:1.35;}
+		.gf-fis-stats{display:flex;gap:8px;flex-wrap:wrap;}
+		.gf-fis-stat{background:#f0f0f1;border:1px solid #dcdcde;border-radius:3px;padding:4px 8px;font-size:12px;color:#50575e;}
+		.gf-fis-controls{display:grid;grid-template-columns:minmax(220px,1fr) minmax(160px,220px);gap:10px;padding:12px 16px;border-bottom:1px solid #dcdcde;background:#f6f7f7;}
+		.gf-fis-controls input,.gf-fis-controls select{width:100%;}
+		.gf-fis-field-list{display:grid;gap:0;}
+		.gf-fis-field-card{display:grid;grid-template-columns:minmax(240px,1fr) minmax(220px,340px);gap:18px;padding:14px 16px;border-bottom:1px solid #dcdcde;background:#fff;}
+		.gf-fis-field-card:nth-child(even){background:#fbfbfc;}
+		.gf-fis-field-card:last-child{border-bottom:0;}
+		.gf-fis-field-main{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;min-width:0;}
+		.gf-fis-field-id{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:28px;padding:0 8px;border-radius:3px;background:#f0f0f1;border:1px solid #dcdcde;font:600 13px/1.2 Menlo,Consolas,monospace;color:#1d2327;}
+		.gf-fis-field-label{font-weight:600;font-size:14px;line-height:1.35;color:#1d2327;overflow-wrap:anywhere;}
+		.gf-fis-field-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;color:#646970;font-size:12px;}
+		.gf-fis-pill{display:inline-flex;align-items:center;border:1px solid #dcdcde;background:#f6f7f7;border-radius:3px;padding:2px 6px;line-height:1.3;}
+		.gf-fis-post-key{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;}
+		.gf-fis-key-group{display:flex;align-items:center;gap:6px;min-width:0;}
+		.gf-fis-key-label{font-size:12px;color:#646970;white-space:nowrap;}
+		.gf-fis-key{display:inline-block;max-width:100%;padding:3px 6px;background:#f0f0f1;border-radius:3px;font:13px/1.4 Menlo,Consolas,monospace;color:#1d2327;overflow-wrap:anywhere;}
+		.gf-fis-copy-key.button{min-height:28px;padding:0 8px;}
+		.gf-fis-subinput-grid{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-top:2px;padding-left:46px;}
+		.gf-fis-subinput{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px;border:1px solid #dcdcde;background:#fff;border-radius:3px;min-width:0;}
+		.gf-fis-subinput-info{min-width:0;}
+		.gf-fis-subinput-title{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;color:#1d2327;}
+		.gf-fis-empty{padding:18px 16px;color:#646970;}
+		@media (max-width: 782px){
+			.gf-fis-controls,.gf-fis-field-card{grid-template-columns:1fr;}
+			.gf-fis-post-key{justify-content:flex-start;padding-left:46px;}
+			.gf-fis-subinput-grid{padding-left:0;}
+		}
 		textarea.large-text.code{font-family:Menlo,Consolas,monospace}
 		.gf-fis-block h3{margin-top:20px}
 	</style>
@@ -406,11 +435,11 @@ function gf_field_id_viewer_admin_page() {
 	$selected_id   = isset($_GET['form_id']) ? absint($_GET['form_id']) : 0;
 	$selected_form = $selected_id ? GFAPI::get_form($selected_id) : null;
 
-	echo '<form method="get" action="">';
+	echo '<form class="gf-fis-form-bar" method="get" action="' . esc_url( admin_url( 'admin.php' ) ) . '">';
 	echo '<input type="hidden" name="page" value="gf-field-id-viewer" />';
-	echo '<label class="screen-reader-text" for="gf-fis-form">Select a form</label> ';
+	echo '<label for="gf-fis-form"><strong>Form</strong></label> ';
 	echo '<select id="gf-fis-form" class="gf-fis-form-select" name="form_id">';
-	echo '<option value="">— Select a form —</option>';
+	echo '<option value="">Select a form</option>';
 	foreach ($forms as $f) {
 		printf(
 			'<option value="%d"%s>%s (ID %d)</option>',
@@ -426,10 +455,38 @@ function gf_field_id_viewer_admin_page() {
 
 	if ( ! $selected_form ) { echo '</div>'; return; }
 
-	echo '<h2 style="margin-top:20px;">Form: ' . esc_html($selected_form['title']) . ' (ID ' . intval($selected_form['id']) . ')</h2>';
+	$field_count = ! empty( $selected_form['fields'] ) && is_array( $selected_form['fields'] ) ? count( $selected_form['fields'] ) : 0;
+	$input_count = count( gf_fis_collect_all_inputs( $selected_form ) );
+	$field_types = [];
 
-	echo '<table class="widefat striped gf-fis-table" style="margin-top:12px">';
-	echo '<thead><tr><th class="col-narrow">Field ID</th><th class="col-narrow">Type</th><th class="col-wide">Label</th><th>Sub-IDs / Inputs</th></tr></thead><tbody>';
+	if ( ! empty( $selected_form['fields'] ) && is_array( $selected_form['fields'] ) ) {
+		foreach ( $selected_form['fields'] as $field_for_type ) {
+			$field_type = $field_for_type['type'] ?? ( isset( $field_for_type->type ) ? $field_for_type->type : '' );
+			if ( '' !== $field_type ) {
+				$field_types[ $field_type ] = true;
+			}
+		}
+	}
+
+	ksort( $field_types );
+
+	echo '<section class="gf-fis-panel">';
+	echo '<div class="gf-fis-panel-head">';
+	echo '<h2 class="gf-fis-panel-title">' . esc_html($selected_form['title']) . ' <span class="gf-fis-pill">ID ' . intval($selected_form['id']) . '</span></h2>';
+	echo '<div class="gf-fis-stats">';
+	echo '<span class="gf-fis-stat">' . esc_html( number_format_i18n( $field_count ) ) . ' fields</span>';
+	echo '<span class="gf-fis-stat">' . esc_html( number_format_i18n( $input_count ) ) . ' POST keys</span>';
+	echo '</div></div>';
+	echo '<div class="gf-fis-controls">';
+	echo '<label class="screen-reader-text" for="gf-fis-field-search">Search fields</label>';
+	echo '<input id="gf-fis-field-search" type="search" placeholder="Search label, field ID, type, or POST key" autocomplete="off" />';
+	echo '<label class="screen-reader-text" for="gf-fis-type-filter">Filter by field type</label>';
+	echo '<select id="gf-fis-type-filter"><option value="">All field types</option>';
+	foreach ( array_keys( $field_types ) as $field_type ) {
+		echo '<option value="' . esc_attr( strtolower( $field_type ) ) . '">' . esc_html( $field_type ) . '</option>';
+	}
+	echo '</select></div>';
+	echo '<div class="gf-fis-field-list" id="gf-fis-field-list">';
 
 	if (!empty($selected_form['fields'])) {
 		foreach ($selected_form['fields'] as $f) {
@@ -437,33 +494,104 @@ function gf_field_id_viewer_admin_page() {
 			$type   = $f['type'] ?? (isset($f->type) ? $f->type : '');
 			$label  = $f['label'] ?? (isset($f->label) ? $f->label : '');
 			$inputs = $f['inputs'] ?? (isset($f->inputs) ? $f->inputs : null);
+			$is_required = gf_fis_field_is_required( $f );
+			$search_bits = [ $id, $type, $label, 'input_' . $id ];
 
-			echo '<tr>';
-			echo '<td><code>' . esc_html($id) . '</code></td>';
-			echo '<td>' . esc_html($type) . '</td>';
-			echo '<td>' . esc_html($label) . '</td>';
-			echo '<td class="gf-fis-subids">';
 			if (!empty($inputs) && is_array($inputs)) {
-				echo '<ul style="margin:0;padding-left:18px">';
+				foreach ($inputs as $inp) {
+					$iid    = is_array($inp) ? ($inp['id'] ?? '') : ($inp->id ?? '');
+					$ilabel = is_array($inp) ? ($inp['label'] ?? '') : ($inp->label ?? '');
+					$search_bits[] = $iid;
+					$search_bits[] = $ilabel;
+					$search_bits[] = 'input_' . $iid;
+				}
+			}
+
+			echo '<article class="gf-fis-field-card" data-type="' . esc_attr( strtolower( $type ) ) . '" data-search="' . esc_attr( strtolower( implode( ' ', array_filter( array_map( 'strval', $search_bits ) ) ) ) ) . '">';
+			echo '<div class="gf-fis-field-main">';
+			echo '<span class="gf-fis-field-id">' . esc_html($id) . '</span>';
+			echo '<div><div class="gf-fis-field-label">' . esc_html($label ? $label : '(No label)') . '</div>';
+			echo '<div class="gf-fis-field-meta"><span class="gf-fis-pill">' . esc_html($type ? $type : 'unknown') . '</span>';
+			if ( $is_required ) {
+				echo '<span class="gf-fis-pill">Required</span>';
+			}
+			if ( ! empty( $inputs ) && is_array( $inputs ) ) {
+				echo '<span class="gf-fis-pill">' . esc_html( number_format_i18n( count( $inputs ) ) ) . ' sub-inputs</span>';
+			}
+			echo '</div></div></div>';
+
+			echo '<div class="gf-fis-post-key">';
+			if (!empty($inputs) && is_array($inputs)) {
+				echo '<span class="gf-fis-pill">Compound field</span>';
+			} else {
+				$post_key = 'input_' . $id;
+				echo '<div class="gf-fis-key-group"><span class="gf-fis-key-label">POST key</span><code class="gf-fis-key">' . esc_html( $post_key ) . '</code><button type="button" class="button gf-fis-copy-key" data-copy="' . esc_attr( $post_key ) . '">Copy</button></div>';
+			}
+			echo '</div>';
+
+			if (!empty($inputs) && is_array($inputs)) {
+				echo '<div class="gf-fis-subinput-grid">';
 				foreach ($inputs as $inp) {
 					$iid    = is_array($inp) ? ($inp['id'] ?? '') : ($inp->id ?? '');
 					$ilabel = is_array($inp) ? ($inp['label'] ?? '') : ($inp->label ?? '');
 					if ($iid === '') continue;
-					echo '<li><code>' . esc_html($iid) . '</code>'
-						. ($ilabel ? ' — ' . esc_html($ilabel) : '')
-						. ' (POST key: <code>input_' . esc_html($iid) . '</code>)'
-						. '</li>';
+					$post_key = 'input_' . $iid;
+					echo '<div class="gf-fis-subinput">';
+					echo '<div class="gf-fis-subinput-info"><div class="gf-fis-subinput-title"><code class="gf-fis-key">' . esc_html($iid) . '</code>' . ( $ilabel ? '<span>' . esc_html($ilabel) . '</span>' : '' ) . '</div>';
+					echo '<div class="gf-fis-key-group"><span class="gf-fis-key-label">POST key</span><code class="gf-fis-key">' . esc_html( $post_key ) . '</code></div></div>';
+					echo '<button type="button" class="button gf-fis-copy-key" data-copy="' . esc_attr( $post_key ) . '">Copy</button>';
+					echo '</div>';
 				}
-				echo '</ul>';
-			} else {
-				echo 'POST key: <code>input_' . esc_html($id) . '</code>';
+				echo '</div>';
 			}
-			echo '</td></tr>';
+			echo '</article>';
 		}
 	} else {
-		echo '<tr><td colspan="4">No fields found.</td></tr>';
+		echo '<div class="gf-fis-empty">No fields found.</div>';
 	}
-	echo '</tbody></table>';
+	echo '<div class="gf-fis-empty" id="gf-fis-no-results" hidden>No matching fields.</div>';
+	echo '</div></section>';
+	?>
+	<script>
+	document.addEventListener('DOMContentLoaded', function(){
+		var search = document.getElementById('gf-fis-field-search');
+		var typeFilter = document.getElementById('gf-fis-type-filter');
+		var cards = Array.prototype.slice.call(document.querySelectorAll('.gf-fis-field-card'));
+		var noResults = document.getElementById('gf-fis-no-results');
+
+		function filterCards(){
+			var query = search ? search.value.trim().toLowerCase() : '';
+			var type = typeFilter ? typeFilter.value : '';
+			var visible = 0;
+
+			cards.forEach(function(card){
+				var matchesSearch = !query || card.getAttribute('data-search').indexOf(query) !== -1;
+				var matchesType = !type || card.getAttribute('data-type') === type;
+				var show = matchesSearch && matchesType;
+				card.hidden = !show;
+				if (show) visible++;
+			});
+
+			if (noResults) {
+				noResults.hidden = visible !== 0;
+			}
+		}
+
+		if (search) search.addEventListener('input', filterCards);
+		if (typeFilter) typeFilter.addEventListener('change', filterCards);
+
+		document.addEventListener('click', function(e){
+			var button = e.target.closest('.gf-fis-copy-key');
+			if (!button) return;
+			navigator.clipboard.writeText(button.getAttribute('data-copy')).then(function(){
+				var old = button.textContent;
+				button.textContent = 'Copied';
+				setTimeout(function(){ button.textContent = old; }, 1200);
+			});
+		});
+	});
+	</script>
+	<?php
 
 	gf_fis_render_curl_block($selected_form);
 
