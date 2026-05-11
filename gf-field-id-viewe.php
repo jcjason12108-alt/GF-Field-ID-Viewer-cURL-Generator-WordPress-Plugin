@@ -3,7 +3,7 @@
  * Plugin Name: GF Field ID Viewer + cURL Generator
  * Plugin URI:  https://github.com/jcjason12108-alt/GF-Field-ID-Viewer-cURL-Generator-WordPress-Plugin
  * Description: View Gravity Forms field IDs (including sub-IDs) and generate ready-to-run cURL examples (URL-encoded + multipart).
- * Version:     1.2.4
+ * Version:     1.2.5
  * Requires at least: 6.0
  * Tested up to: 6.9.4
  * Requires PHP: 7.4
