@@ -1,6 +1,6 @@
 # GF Field ID Viewer + cURL Generator (WordPress Plugin)
 
-**Version:** 1.2.5  
+**Version:** 1.2.6  
 **Author:** Jason Cox  
 **License:** GPLv2 or later  
 
@@ -79,6 +79,9 @@ Requirements
 ⸻
 
 Changelog
+
+1.2.6
+	•	Added novice-friendly cURL help panels that explain command parts, authentication, and when to use each request format.
 
 1.2.5
 	•	Improved the field list layout with search, type filtering, compact field rows, and POST key copy buttons.

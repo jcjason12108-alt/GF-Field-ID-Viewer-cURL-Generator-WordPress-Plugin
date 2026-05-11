@@ -3,7 +3,7 @@
  * Plugin Name: GF Field ID Viewer + cURL Generator
  * Plugin URI:  https://github.com/jcjason12108-alt/GF-Field-ID-Viewer-cURL-Generator-WordPress-Plugin
  * Description: View Gravity Forms field IDs (including sub-IDs) and generate ready-to-run cURL examples (URL-encoded + multipart).
- * Version:     1.2.5
+ * Version:     1.2.6
  * Requires at least: 6.0
  * Tested up to: 6.9.4
  * Requires PHP: 7.4
@@ -109,6 +109,21 @@ add_action('admin_head', function () {
 		.gf-fis-subinput-info{min-width:0;}
 		.gf-fis-subinput-title{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;color:#1d2327;}
 		.gf-fis-empty{padding:18px 16px;color:#646970;}
+		.gf-fis-help{border:1px solid #c3c4c7;background:#fff;margin:12px 0;padding:0;}
+		.gf-fis-help summary{cursor:pointer;padding:10px 12px;font-weight:600;color:#1d2327;list-style:none;}
+		.gf-fis-help summary::-webkit-details-marker{display:none;}
+		.gf-fis-help summary:before{content:"?";display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-right:6px;border-radius:50%;background:#2271b1;color:#fff;font-size:12px;line-height:1;}
+		.gf-fis-help[open] summary{border-bottom:1px solid #dcdcde;background:#f6f7f7;}
+		.gf-fis-help-body{padding:12px;color:#3c434a;}
+		.gf-fis-help-body p{margin:0 0 10px;}
+		.gf-fis-help-body ol,.gf-fis-help-body ul{margin:0 0 0 20px;}
+		.gf-fis-help-body li{margin:0 0 6px;}
+		.gf-fis-curl-section{margin-top:18px;}
+		.gf-fis-curl-section h3{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+		.gf-fis-help-inline{display:inline-block;margin:0;}
+		.gf-fis-help-inline summary{padding:3px 8px;font-size:12px;font-weight:500;border:1px solid #c3c4c7;background:#f6f7f7;border-radius:3px;}
+		.gf-fis-help-inline summary:before{width:15px;height:15px;font-size:10px;margin-right:4px;}
+		.gf-fis-help-inline .gf-fis-help-body{position:relative;max-width:720px;}
 		@media (max-width: 782px){
 			.gf-fis-controls,.gf-fis-field-card{grid-template-columns:1fr;}
 			.gf-fis-post-key{justify-content:flex-start;padding-left:46px;}
@@ -341,7 +356,27 @@ function gf_fis_render_curl_block($form) {
 	echo '<div class="gf-fis-block">';
 	echo '<h2>cURL Generator</h2>';
 	echo '<p><strong>Endpoint:</strong> <code>' . esc_html($endpoint) . '</code></p>';
-	echo '<p><strong>Auth:</strong> use a WordPress <em>Application Password</em>. Replace <code>BASE64_ENCODED_CREDENTIALS</code> with <code>base64_encode("user@example.com:APPLICATION_PASSWORD")</code> or use <code>-u "user@example.com:APPLICATION_PASSWORD"</code> instead of the header.</p>';
+	echo '<details class="gf-fis-help">';
+	echo '<summary>Need help understanding cURL?</summary>';
+	echo '<div class="gf-fis-help-body">';
+	echo '<p><strong>cURL</strong> is a command you paste into Terminal, a server shell, Postman, n8n, or another API tool to send a test submission to this Gravity Form.</p>';
+	echo '<ol>';
+	echo '<li>Copy one of the commands below.</li>';
+	echo '<li>Replace the example field values with the real values you want to test.</li>';
+	echo '<li>Replace <code>BASE64_ENCODED_CREDENTIALS</code> with your authorization value, or replace the whole <code>-H \'Authorization: Basic ...\'</code> line with <code>-u "user@example.com:APPLICATION_PASSWORD"</code>.</li>';
+	echo '<li>Run the command. If it works, Gravity Forms will create a new entry for this form.</li>';
+	echo '</ol>';
+	echo '<p><strong>Important:</strong> use a WordPress Application Password, not your normal account password. You can create one from Users > Profile > Application Passwords.</p>';
+	echo '</div></details>';
+	echo '<details class="gf-fis-help">';
+	echo '<summary>What do the command parts mean?</summary>';
+	echo '<div class="gf-fis-help-body"><ul>';
+	echo '<li><code>curl -X POST</code> means “send data to this URL.”</li>';
+	echo '<li>The endpoint URL is the Gravity Forms REST API address for form ID <code>' . esc_html( $form_id ) . '</code>.</li>';
+	echo '<li><code>Authorization</code> proves WordPress should allow the request.</li>';
+	echo '<li><code>Content-Type</code> tells Gravity Forms what format the submitted fields are using.</li>';
+	echo '<li><code>input_7=example</code> means “send the value <code>example</code> into field ID <code>7</code>.”</li>';
+	echo '</ul></div></details>';
 
 	// URL-ENCODED (WORKING STYLE)
 	$url_pairs = gf_fis_build_example_urlencoded_pairs($form);
@@ -355,9 +390,11 @@ function gf_fis_render_curl_block($form) {
 		. "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n"
 		. implode(" \\\n", $lines);
 
-	echo '<h3>URL-encoded cURL (matches n8n working example)</h3>';
+	echo '<section class="gf-fis-curl-section">';
+	echo '<h3>URL-encoded cURL <details class="gf-fis-help gf-fis-help-inline"><summary>When should I use this?</summary><div class="gf-fis-help-body">Use this first if you are new to testing Gravity Forms submissions. It is usually the easiest format for Terminal, n8n, and simple API tests because each field is sent as a separate <code>--data-urlencode</code> line.</div></details></h3>';
 	echo '<textarea id="gf-curl-urlencoded" class="large-text code" rows="12" readonly>'. esc_textarea($urlencoded_block) .'</textarea>';
 	echo '<p><button type="button" class="button copy-curl" data-target="gf-curl-urlencoded">Copy URL-encoded cURL</button></p>';
+	echo '</section>';
 
 	// JSON (optional demo)
 	$mock_json = wp_json_encode(['input_values' => gf_fis_build_mock_payload($form)], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
@@ -367,9 +404,11 @@ function gf_fis_render_curl_block($form) {
 		. "  -H 'Content-Type: application/json' \\\n"
 		. '  -d ' . gf_fis_shell_single_quote( $mock_json );
 
-	echo '<h3>JSON cURL (alternate GF REST format)</h3>';
+	echo '<section class="gf-fis-curl-section">';
+	echo '<h3>JSON cURL <details class="gf-fis-help gf-fis-help-inline"><summary>When should I use this?</summary><div class="gf-fis-help-body">Use JSON when another app expects one structured payload. JSON is helpful for custom integrations, but it is less beginner-friendly because punctuation, quotes, and brackets must stay valid.</div></details></h3>';
 	echo '<textarea id="gf-curl-json" class="large-text code" rows="12" readonly>'. esc_textarea($json_block) .'</textarea>';
   	echo '<p><button type="button" class="button copy-curl" data-target="gf-curl-json">Copy JSON cURL</button></p>';
+	echo '</section>';
 
 	// MULTIPART (if files exist)
 	if ($has_files) {
@@ -393,9 +432,11 @@ function gf_fis_render_curl_block($form) {
 			. '  -H ' . gf_fis_shell_single_quote( $auth_header ) . " \\\n"
 			. implode(" \\\n", $mp_lines);
 
-		echo '<h3>Multipart cURL (for file uploads)</h3>';
+		echo '<section class="gf-fis-curl-section">';
+		echo '<h3>Multipart cURL <details class="gf-fis-help gf-fis-help-inline"><summary>When should I use this?</summary><div class="gf-fis-help-body">Use multipart only when the form includes file upload fields. Replace <code>/path/to/file.pdf</code> with the real file path on the computer or server where you run the command.</div></details></h3>';
 		echo '<textarea id="gf-curl-multipart" class="large-text code" rows="12" readonly>'. esc_textarea($multipart_block) .'</textarea>';
 		echo '<p><button type="button" class="button copy-curl" data-target="gf-curl-multipart">Copy Multipart cURL</button></p>';
+		echo '</section>';
 	}
 
 	// Copy buttons handler
