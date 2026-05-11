@@ -4,7 +4,7 @@ Tags: gravity forms, field ids, curl, rest api
 Requires at least: 6.0
 Tested up to: 6.9.4
 Requires PHP: 7.4
-Stable tag: 1.2.6
+Stable tag: 1.2.7
 License: GPL-2.0-or-later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,9 @@ GF Field ID Viewer + cURL Generator adds an admin screen for viewing Gravity For
 3. Open Tools > GF Field ID Viewer, or Forms > Field ID Viewer when Gravity Forms is active.
 
 == Changelog ==
+
+= 1.2.7 =
+* Hardened admin request handling by unslashing the selected form ID before sanitizing it.
 
 = 1.2.6 =
 * Added novice-friendly cURL help panels that explain command parts, authentication, and when to use each request format.
