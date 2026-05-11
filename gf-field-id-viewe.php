@@ -1,12 +1,45 @@
 <?php
 /**
  * Plugin Name: GF Field ID Viewer + cURL Generator
+ * Plugin URI:  https://github.com/jcjason12108-alt/-GF-Field-ID-Viewer-cURL-Generator-WordPress-Plugin-
  * Description: View Gravity Forms field IDs (including sub-IDs) and generate ready-to-run cURL examples (URL-encoded + multipart).
- * Version:     1.2.3
+ * Version:     1.2.4
+ * Requires at least: 6.0
+ * Tested up to: 6.9.4
+ * Requires PHP: 7.4
  * Author:      Jason Cox
+ * License:     GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: gf-field-id-viewer
  */
 
-if ( ! defined('ABSPATH') ) exit;
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+require_once __DIR__ . '/plugin-update-checker/plugin-update-checker.php';
+
+$gf_fis_update_checker = \YahnisElsts\PluginUpdateChecker\v5\PucFactory::buildUpdateChecker(
+	'https://github.com/jcjason12108-alt/-GF-Field-ID-Viewer-cURL-Generator-WordPress-Plugin-/',
+	__FILE__,
+	'gf-field-id-viewer'
+);
+$gf_fis_update_checker->setBranch( 'main' );
+
+add_filter(
+	$gf_fis_update_checker->getUniqueName( 'vcs_update_detection_strategies' ),
+	static function ( array $strategies ): array {
+		return isset( $strategies['branch'] ) ? array( 'branch' => $strategies['branch'] ) : $strategies;
+	}
+);
+
+$gf_fis_github_token = defined( 'PLUGIN_UPDATE_GITHUB_TOKEN' )
+	? PLUGIN_UPDATE_GITHUB_TOKEN
+	: getenv( 'PLUGIN_UPDATE_GITHUB_TOKEN' );
+
+if ( ! empty( $gf_fis_github_token ) ) {
+	$gf_fis_update_checker->setAuthentication( $gf_fis_github_token );
+}
 
 /** ----- Capability helpers ----- */
 function gf_fis_cap_gf() : string { return 'gravityforms_view_forms'; }
@@ -40,7 +73,11 @@ add_action('admin_menu', function () {
 
 /** ----- Styling ----- */
 add_action('admin_head', function () {
-	if ( ! isset($_GET['page']) || $_GET['page'] !== 'gf-field-id-viewer' ) return; ?>
+	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+	if ( 'gf-field-id-viewer' !== $page ) {
+		return;
+	}
+	?>
 	<style>
 		.gf-fis-wrap .notice{margin:1em 0;}
 		.gf-fis-table th, .gf-fis-table td{vertical-align: top;}
@@ -260,12 +297,17 @@ function gf_fis_build_mock_payload($form) : array {
 	return $payload;
 }
 
+function gf_fis_shell_single_quote( $value ) : string {
+	return "'" . str_replace( "'", "'\"'\"'", (string) $value ) . "'";
+}
+
 /** ----- cURL renderer (dynamic per selected form) ----- */
 function gf_fis_render_curl_block($form) {
 	$site      = site_url();
 	$form_id   = intval($form['id']);
 	$endpoint  = $site . '/wp-json/gf/v2/forms/' . $form_id . '/submissions';
 	$has_files = gf_fis_has_fileupload($form);
+	$auth_header = 'Authorization: Basic BASE64_ENCODED_CREDENTIALS';
 
 	echo '<div class="gf-fis-block">';
 	echo '<h2>cURL Generator</h2>';
@@ -276,11 +318,11 @@ function gf_fis_render_curl_block($form) {
 	$url_pairs = gf_fis_build_example_urlencoded_pairs($form);
 	$lines = [];
 	foreach ($url_pairs as $p) {
-		$lines[] = "  --data-urlencode '" . esc_attr($p) . "'";
+		$lines[] = '  --data-urlencode ' . gf_fis_shell_single_quote( $p );
 	}
 	$urlencoded_block = "curl -X POST \\\n"
-		. "  '" . esc_url($endpoint) . "' \\\n"
-		. "  -H 'Authorization: Basic BASE64_ENCODED_CREDENTIALS' \\\n"
+		. '  ' . gf_fis_shell_single_quote( $endpoint ) . " \\\n"
+		. '  -H ' . gf_fis_shell_single_quote( $auth_header ) . " \\\n"
 		. "  -H 'Content-Type: application/x-www-form-urlencoded' \\\n"
 		. implode(" \\\n", $lines);
 
@@ -291,10 +333,10 @@ function gf_fis_render_curl_block($form) {
 	// JSON (optional demo)
 	$mock_json = wp_json_encode(['input_values' => gf_fis_build_mock_payload($form)], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 	$json_block = "curl -X POST \\\n"
-		. "  '" . esc_url($endpoint) . "' \\\n"
-		. "  -H 'Authorization: Basic BASE64_ENCODED_CREDENTIALS' \\\n"
+		. '  ' . gf_fis_shell_single_quote( $endpoint ) . " \\\n"
+		. '  -H ' . gf_fis_shell_single_quote( $auth_header ) . " \\\n"
 		. "  -H 'Content-Type: application/json' \\\n"
-		. "  -d '" . $mock_json . "'";
+		. '  -d ' . gf_fis_shell_single_quote( $mock_json );
 
 	echo '<h3>JSON cURL (alternate GF REST format)</h3>';
 	echo '<textarea id="gf-curl-json" class="large-text code" rows="12" readonly>'. esc_textarea($json_block) .'</textarea>';
@@ -306,7 +348,7 @@ function gf_fis_render_curl_block($form) {
 		// Add non-file fields as -F key=value (all inputs)
 		$payload = gf_fis_collect_all_inputs($form);
 		foreach ($payload as $k => $v) {
-			$mp_lines[] = "  -F '{$k}={$v}'";
+			$mp_lines[] = '  -F ' . gf_fis_shell_single_quote( $k . '=' . $v );
 		}
 		$mp_lines[] = "  -F 'gform_submit=1'";
 		// Add file fields as -F input_{id}=@/path/to/file.pdf
@@ -314,12 +356,12 @@ function gf_fis_render_curl_block($form) {
 			$type = $f['type'] ?? (isset($f->type) ? $f->type : '');
 			if ($type === 'fileupload') {
 				$field_id = $f['id'] ?? (isset($f->id) ? $f->id : '');
-				if ($field_id !== '') $mp_lines[] = "  -F 'input_{$field_id}=@/path/to/file.pdf'";
+				if ($field_id !== '') $mp_lines[] = '  -F ' . gf_fis_shell_single_quote( 'input_' . $field_id . '=@/path/to/file.pdf' );
 			}
 		}
 		$multipart_block = "curl -X POST \\\n"
-			. "  '" . esc_url($endpoint) . "' \\\n"
-			. "  -H 'Authorization: Basic BASE64_ENCODED_CREDENTIALS' \\\n"
+			. '  ' . gf_fis_shell_single_quote( $endpoint ) . " \\\n"
+			. '  -H ' . gf_fis_shell_single_quote( $auth_header ) . " \\\n"
 			. implode(" \\\n", $mp_lines);
 
 		echo '<h3>Multipart cURL (for file uploads)</h3>';
@@ -349,6 +391,10 @@ function gf_fis_render_curl_block($form) {
 
 /** ----- Admin page ----- */
 function gf_field_id_viewer_admin_page() {
+	if ( ! current_user_can( gf_fis_cap_tools() ) && ! current_user_can( gf_fis_cap_gf() ) ) {
+		wp_die( esc_html__( 'You do not have permission to access this page.', 'gf-field-id-viewer' ) );
+	}
+
 	echo '<div class="wrap gf-fis-wrap"><h1>GF Field ID Viewer</h1>';
 
 	if ( ! class_exists('GFAPI') ) {
