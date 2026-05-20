@@ -3,9 +3,9 @@
  * Plugin Name: GF Field ID Viewer + cURL Generator
  * Plugin URI:  https://github.com/jcjason12108-alt/GF-Field-ID-Viewer-cURL-Generator-WordPress-Plugin
  * Description: View Gravity Forms field IDs (including sub-IDs) and generate ready-to-run cURL examples (URL-encoded + multipart).
- * Version:     1.2.7
+ * Version:     1.2.8
  * Requires at least: 6.0
- * Tested up to: 6.9.4
+ * Tested up to: 7.0
  * Requires PHP: 7.4
  * Author:      Jason Cox
  * License:     GPL-2.0-or-later
@@ -42,9 +42,17 @@ if ( ! empty( $gf_fis_github_token ) ) {
 }
 
 /** ----- Capability helpers ----- */
-function gf_fis_cap_gf() : string { return 'gravityforms_view_forms'; }
-function gf_fis_cap_tools() : string { return 'manage_options'; }
-function gf_fis_user_has_gf_cap() : bool { return current_user_can( gf_fis_cap_gf() ); }
+if ( ! function_exists( 'gf_fis_cap_gf' ) ) {
+	function gf_fis_cap_gf() : string { return 'gravityforms_view_forms'; }
+}
+
+if ( ! function_exists( 'gf_fis_cap_tools' ) ) {
+	function gf_fis_cap_tools() : string { return 'manage_options'; }
+}
+
+if ( ! function_exists( 'gf_fis_user_has_gf_cap' ) ) {
+	function gf_fis_user_has_gf_cap() : bool { return current_user_can( gf_fis_cap_gf() ); }
+}
 
 /** ----- Menu registration ----- */
 add_action('admin_menu', function () {
@@ -75,6 +83,9 @@ add_action('admin_menu', function () {
 add_action('admin_head', function () {
 	$page = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 	if ( 'gf-field-id-viewer' !== $page ) {
+		return;
+	}
+	if ( ! current_user_can( gf_fis_cap_tools() ) && ! current_user_can( gf_fis_cap_gf() ) ) {
 		return;
 	}
 	?>
@@ -138,32 +149,37 @@ add_action('admin_head', function () {
 /**
  * Return true if the field is required.
  */
-function gf_fis_field_is_required($field) : bool {
-	// Works for both array and object style fields.
-	if (is_array($field)) {
-		return !empty($field['isRequired']);
+if ( ! function_exists( 'gf_fis_field_is_required' ) ) {
+	function gf_fis_field_is_required($field) : bool {
+		// Works for both array and object style fields.
+		if (is_array($field)) {
+			return !empty($field['isRequired']);
+		}
+		if (is_object($field)) {
+			return !empty($field->isRequired);
+		}
+		return false;
 	}
-	if (is_object($field)) {
-		return !empty($field->isRequired);
-	}
-	return false;
 }
 
-function gf_fis_has_fileupload($form) : bool {
-	if (empty($form['fields'])) return false;
-	foreach ($form['fields'] as $f) {
-		$type = $f['type'] ?? (isset($f->type) ? $f->type : '');
-		if ($type === 'fileupload') return true;
+if ( ! function_exists( 'gf_fis_has_fileupload' ) ) {
+	function gf_fis_has_fileupload($form) : bool {
+		if (empty($form['fields'])) return false;
+		foreach ($form['fields'] as $f) {
+			$type = $f['type'] ?? (isset($f->type) ? $f->type : '');
+			if ($type === 'fileupload') return true;
+		}
+		return false;
 	}
-	return false;
 }
 
 /**
  * Collect ALL non-file input_* pairs for a form with sensible mock values.
  * Includes optional fields. Skips honeypot/captcha/page/section and fileupload.
  */
-function gf_fis_collect_all_inputs(array $form) : array {
-	$kv = [];
+if ( ! function_exists( 'gf_fis_collect_all_inputs' ) ) {
+	function gf_fis_collect_all_inputs(array $form) : array {
+		$kv = [];
 
 	// helpers
 	$get_first_choice_value = function($field){
@@ -316,7 +332,8 @@ function gf_fis_collect_all_inputs(array $form) : array {
 		}
 	}
 
-	return $kv;
+		return $kv;
+	}
 }
 
 /**
@@ -324,29 +341,36 @@ function gf_fis_collect_all_inputs(array $form) : array {
  * Mirrors a working GF REST submission (POST x-www-form-urlencoded) and appends gform_submit=1.
  * IMPORTANT: Do NOT pre-encode values here; curl's --data-urlencode will encode them.
  */
-function gf_fis_build_example_urlencoded_pairs($form) : array {
-	$pairs = [];
-	$kv = gf_fis_collect_all_inputs($form);
-	foreach ($kv as $k => $v) {
-		$pairs[] = $k . '=' . $v; // curl --data-urlencode will encode
+if ( ! function_exists( 'gf_fis_build_example_urlencoded_pairs' ) ) {
+	function gf_fis_build_example_urlencoded_pairs($form) : array {
+		$pairs = [];
+		$kv = gf_fis_collect_all_inputs($form);
+		foreach ($kv as $k => $v) {
+			$pairs[] = $k . '=' . $v; // curl --data-urlencode will encode
+		}
+		$pairs[] = 'gform_submit=1';
+		return $pairs;
 	}
-	$pairs[] = 'gform_submit=1';
-	return $pairs;
 }
 
 /** Build a simple mock (non-file) payload for JSON / multipart demo */
-function gf_fis_build_mock_payload($form) : array {
-	$payload = gf_fis_collect_all_inputs($form);
-	$payload['gform_submit'] = '1';
-	return $payload;
+if ( ! function_exists( 'gf_fis_build_mock_payload' ) ) {
+	function gf_fis_build_mock_payload($form) : array {
+		$payload = gf_fis_collect_all_inputs($form);
+		$payload['gform_submit'] = '1';
+		return $payload;
+	}
 }
 
-function gf_fis_shell_single_quote( $value ) : string {
-	return "'" . str_replace( "'", "'\"'\"'", (string) $value ) . "'";
+if ( ! function_exists( 'gf_fis_shell_single_quote' ) ) {
+	function gf_fis_shell_single_quote( $value ) : string {
+		return "'" . str_replace( "'", "'\"'\"'", (string) $value ) . "'";
+	}
 }
 
 /** ----- cURL renderer (dynamic per selected form) ----- */
-function gf_fis_render_curl_block($form) {
+if ( ! function_exists( 'gf_fis_render_curl_block' ) ) {
+	function gf_fis_render_curl_block($form) {
 	$site      = site_url();
 	$form_id   = intval($form['id']);
 	$endpoint  = $site . '/wp-json/gf/v2/forms/' . $form_id . '/submissions';
@@ -456,11 +480,13 @@ function gf_fis_render_curl_block($form) {
 	});
 	</script>
 	<?php
-	echo '</div>';
+		echo '</div>';
+	}
 }
 
 /** ----- Admin page ----- */
-function gf_field_id_viewer_admin_page() {
+if ( ! function_exists( 'gf_field_id_viewer_admin_page' ) ) {
+	function gf_field_id_viewer_admin_page() {
 	if ( ! current_user_can( gf_fis_cap_tools() ) && ! current_user_can( gf_fis_cap_gf() ) ) {
 		wp_die( esc_html__( 'You do not have permission to access this page.', 'gf-field-id-viewer' ) );
 	}
@@ -468,7 +494,7 @@ function gf_field_id_viewer_admin_page() {
 	echo '<div class="wrap gf-fis-wrap"><h1>GF Field ID Viewer</h1>';
 
 	if ( ! class_exists('GFAPI') ) {
-		echo '<div class="notice notice-error"><p>Gravity Forms is required.</p></div></div>';
+		echo '<div class="notice notice-error"><p>' . esc_html__( 'Gravity Forms is required.', 'gf-field-id-viewer' ) . '</p></div></div>';
 		return;
 	}
 
@@ -636,5 +662,6 @@ function gf_field_id_viewer_admin_page() {
 
 	gf_fis_render_curl_block($selected_form);
 
-	echo '</div>';
+		echo '</div>';
+	}
 }
